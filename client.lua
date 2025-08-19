@@ -67,7 +67,7 @@ local page_ui = {       -- 页相关
 }
 
 local page = 1      -- 当前页码
-local pagesize = 5      -- 每页显示的条数
+local pagesize = 10      -- 每页显示的条数
 
 
 --自定义事件监听
@@ -155,7 +155,12 @@ local function OnOpenUI(e)      -- 每次打开页面都渲染，打开逻辑需
     Render(e.eventobjid)
 end
 
+local function OnCloseUI()
+    page = 1
+end
+
 ScriptSupportEvent:registerEvent('GetServerData', func_event)
 ScriptSupportEvent:registerEvent('UI.Button.Click', LeftPage)
 ScriptSupportEvent:registerEvent('UI.Button.Click', RightPage)
 ScriptSupportEvent:registerEvent('UI.Show', OnOpenUI)
+ScriptSupportEvent:registerEvent('UI.Hide', OnCloseUI)
