@@ -90,8 +90,8 @@ local Rand_vValue = {       --排行的变量名，与RankPage顺序必须一致
 --------------------元数据分割线--------------------
 
 local function Convert(num)
-    if type(num) ~= "number" then
-        return tostring(num)
+    if num == nil then
+        return ""
     end
     if num < 10000 then
         if num == math.floor(num) then
@@ -159,8 +159,8 @@ local function Render(eventobjid)       -- 渲染主函数
     for k, v in ipairs(data_ui) do
         local index = startIndex + k - 1
         local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
-        local vValue = Convert(dataItem and dataItem.v) or ""
-        Customui:setText(eventobjid, ui, v, vValue)
+        vValue = (dataItem and dataItem.v) or ""
+        Customui:setText(eventobjid, ui, v, Convert(tonumber(vValue)))
     end
     My_info(eventobjid) -- 渲染自己的信息
 end
@@ -212,8 +212,13 @@ local function OnOpenUI(e)      -- 每次打开页面都渲染，打开逻辑需
     Render(e.eventobjid)
 end
 
+local function OnPlayerLeaveGame(e)
+    player_data[e.eventobjid] = nil
+end
+
 ScriptSupportEvent:registerEvent('GetServerData', func_event)
 ScriptSupportEvent:registerEvent('UI.Button.Click', LeftPage)
 ScriptSupportEvent:registerEvent('UI.Button.Click', RightPage)
 ScriptSupportEvent:registerEvent('UI.Button.Click', ChangeRand)
 ScriptSupportEvent:registerEvent('UI.Show', OnOpenUI)
+ScriptSupportEvent:registerEvent('Game.AnyPlayer.LeaveGame', OnPlayerLeaveGame)
