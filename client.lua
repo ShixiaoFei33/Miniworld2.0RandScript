@@ -60,6 +60,28 @@ local my_ui = {     -- 自己四个数据序列
     "7540194344203696498-149492_64",         --自己击杀数
 }
 
+local head_ui = {       -- 头内容UIID
+    "7540194344203696498-149492_5",
+    "7540194344203696498-149492_6",
+    "7540194344203696498-149492_7",
+    "7540194344203696498-149492_8"
+}
+
+local head_content = {      -- 头内容
+    {
+        "排行",
+        "玩家名字",
+        "玩家迷你号",
+        "玩家数据"
+    },
+    {
+        "排行",
+        "玩家名字",
+        "玩家迷你号",
+        "玩家芜湖"
+    },
+}
+
 local page_ui = {       -- 页相关
     "7540194344203696498-149492_70", -- 页码
     "7540194344203696498-149492_65", -- 左翻
@@ -139,6 +161,9 @@ local function Render(eventobjid)       -- 渲染主函数
     local startIndex = (player_data[eventobjid].page - 1) * pagesize + 1
     local endIndex = math.min(player_data[eventobjid].page * pagesize, #Data[player_data[eventobjid].currentRankIndex])
     Customui:setText(eventobjid, ui, page_ui[1], player_data[eventobjid].page)      -- 页码
+    for k, v in ipairs(head_ui) do
+        Customui:setText(eventobjid, ui, v, head_content[player_data[eventobjid].currentRankIndex][k])
+    end
     for k, v in ipairs(rand_ui) do
         local index = startIndex + k - 1
         local rand = (index >= startIndex and index <= endIndex) and tostring(index) or ""
