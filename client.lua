@@ -147,20 +147,20 @@ local function Render(eventobjid)       -- 渲染主函数
     for k, v in ipairs(id_ui) do
         local index = startIndex + k - 1
         local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
-        local nick = (dataItem and dataItem["nick"]) or ""
+        local nick = (dataItem and dataItem.nick) or ""
         Customui:setText(eventobjid, ui, v, nick)
     end
     for k, v in ipairs(mini_ui) do
         local index = startIndex + k - 1
         local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
-        local kValue = (dataItem and dataItem["k"]) or ""
+        local kValue = (dataItem and dataItem.k) or ""
         Customui:setText(eventobjid, ui, v, kValue)
     end
     for k, v in ipairs(data_ui) do
         local index = startIndex + k - 1
         local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
-        local vValue = (dataItem and tostring(dataItem["v"])) or ""
-        Customui:setText(eventobjid, ui, v, Convert(vValue))
+        local vValue = Convert(dataItem and dataItem.v) or ""
+        Customui:setText(eventobjid, ui, v, vValue)
     end
     My_info(eventobjid) -- 渲染自己的信息
 end
