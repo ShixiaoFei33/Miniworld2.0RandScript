@@ -1,5 +1,6 @@
 --------------------元数据分割线--------------------
 local Data = {}
+local player_data = {}
 local id_ui = {     -- 名字序列(由上到下，不限数量)
     "7540194344203696498-149492_12",
     "7540194344203696498-149492_17",
@@ -77,10 +78,7 @@ local convert_units = {     --单位转换(科学计数法)
 
 local ui = "7540194344203696498-149492"     -- 当前UI页
 
-local page = 1      -- 当前页码(无需修改)
 local pagesize = 10      -- 每页显示的条数
-
-local currentRankIndex = 1    -- 当前显示的排行榜索引(无需修改)
 local RandPage = {      -- 排行榜按钮(对应UI由上到下，由左到右)
     "7540194344203696498-149492_67",
     "7540194344203696498-149492_72"
@@ -115,15 +113,9 @@ local function Convert(num)
     end
 end
 
--- 接收来自server的信息
-local function func_event(param)        -- 从server那边搞过来的数据，自定义事件传递
-    local ret, data = pcall(JSON.decode,JSON,param.customdata)
-    Data = data or {}
-end
-
 local function My_info(eventobjid)      -- 自己数据的处理
     local found = false
-    for k, v in ipairs(Data[currentRankIndex]) do
+    for k, v in ipairs(Data[player_data[eventobjid].currentRankIndex]) do
         if v.k == tostring(eventobjid) then       -- 改v.k，前100
             found = true
             Customui:setText(eventobjid, ui, my_ui[1], tostring(k))
@@ -138,15 +130,15 @@ local function My_info(eventobjid)      -- 自己数据的处理
         local result,name=Player:getNickname(eventobjid)
         Customui:setText(eventobjid, ui, my_ui[2], name)
         Customui:setText(eventobjid, ui, my_ui[3], tostring(eventobjid) or "")
-        local result, value = VarLib2:getPlayerVarByName(eventobjid, 3, Rand_vValue[currentRankIndex])
+        local result, value = VarLib2:getPlayerVarByName(eventobjid, 3, Rand_vValue[player_data[eventobjid].currentRankIndex])
         Customui:setText(eventobjid, ui, my_ui[4], Convert(value) or "")
     end
 end
 
 local function Render(eventobjid)       -- 渲染主函数
-    local startIndex = (page - 1) * pagesize + 1
-    local endIndex = math.min(page * pagesize, #Data[currentRankIndex])
-    Customui:setText(eventobjid, ui, page_ui[1], page)      -- 页码
+    local startIndex = (player_data[eventobjid].page - 1) * pagesize + 1
+    local endIndex = math.min(player_data[eventobjid].page * pagesize, #Data[player_data[eventobjid].currentRankIndex])
+    Customui:setText(eventobjid, ui, page_ui[1], player_data[eventobjid].page)      -- 页码
     for k, v in ipairs(rand_ui) do
         local index = startIndex + k - 1
         local rand = (index >= startIndex and index <= endIndex) and tostring(index) or ""
@@ -154,29 +146,38 @@ local function Render(eventobjid)       -- 渲染主函数
     end
     for k, v in ipairs(id_ui) do
         local index = startIndex + k - 1
-        local dataItem = Data[currentRankIndex][index]
+        local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
         local nick = (dataItem and dataItem["nick"]) or ""
         Customui:setText(eventobjid, ui, v, nick)
     end
     for k, v in ipairs(mini_ui) do
         local index = startIndex + k - 1
-        local dataItem = Data[currentRankIndex][index]
+        local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
         local kValue = (dataItem and dataItem["k"]) or ""
         Customui:setText(eventobjid, ui, v, kValue)
     end
     for k, v in ipairs(data_ui) do
         local index = startIndex + k - 1
-        local dataItem = Data[currentRankIndex][index]
+        local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
         local vValue = (dataItem and tostring(dataItem["v"])) or ""
         Customui:setText(eventobjid, ui, v, vValue)
     end
     My_info(eventobjid) -- 渲染自己的信息
 end
 
+-- 接收来自server的信息
+local function func_event(param)        -- 从server那边搞过来的数据，自定义事件传递
+    local ret, data = pcall(JSON.decode,JSON,param.customdata)
+    Data = data or {}
+    for k, _ in ipairs(player_data) do
+        Render(k)
+    end
+end
+
 local function LeftPage(e)      -- 左翻
     if e.uielement == page_ui[2] then
-        if page > 1 then
-            page = page - 1
+        if player_data[e.eventobjid].page > 1 then
+            player_data[e.eventobjid].page = player_data[e.eventobjid].page - 1
             Render(e.eventobjid)
         else
             local result = Player:notifyGameInfo2Self(e.eventobjid, page_ui[4])
@@ -186,8 +187,8 @@ end
 
 local function RightPage(e)     -- 右翻
     if e.uielement == page_ui[3] then
-        if page < math.ceil(#Data[currentRankIndex] / pagesize) then
-            page = page + 1
+        if player_data[e.eventobjid].page < math.ceil(#Data[player_data[e.eventobjid].currentRankIndex] / pagesize) then
+            player_data[e.eventobjid].page = player_data[e.eventobjid].page + 1
             Render(e.eventobjid)
         else
             local result = Player:notifyGameInfo2Self(e.eventobjid, page_ui[5])
@@ -198,8 +199,8 @@ end
 local function ChangeRand(e)
     for index, value in ipairs(RandPage) do
         if value == e.uielement then
-            currentRankIndex = index
-            page = 1
+            player_data[e.eventobjid].currentRankIndex = index
+            player_data[e.eventobjid].page = 1
             Render(e.eventobjid)
             break
         end
@@ -207,13 +208,8 @@ local function ChangeRand(e)
 end
 
 local function OnOpenUI(e)      -- 每次打开页面都渲染，打开逻辑需要自己加，或者触发器里拼
-    --打开界面渲染
+    player_data[e.eventobjid] = {page = 1, currentRankIndex = 1}
     Render(e.eventobjid)
-end
-
-local function OnCloseUI()
-    page = 1
-    currentRankIndex = 1
 end
 
 ScriptSupportEvent:registerEvent('GetServerData', func_event)
@@ -221,4 +217,3 @@ ScriptSupportEvent:registerEvent('UI.Button.Click', LeftPage)
 ScriptSupportEvent:registerEvent('UI.Button.Click', RightPage)
 ScriptSupportEvent:registerEvent('UI.Button.Click', ChangeRand)
 ScriptSupportEvent:registerEvent('UI.Show', OnOpenUI)
-ScriptSupportEvent:registerEvent('UI.Hide', OnCloseUI)
