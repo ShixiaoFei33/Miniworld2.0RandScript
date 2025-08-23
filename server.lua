@@ -1,37 +1,66 @@
-local Player_data = {}
-local CloudData = {}
-
-local function Player_Beat_info()       -- 玩家自己的数据
-    for k, _ in pairs(Player_data) do
-        local result, value = VarLib2:getPlayerVarByName(k, 3, "击杀数")        -- 获取要排行的玩家个人数据
-        Player_data[k] = value      -- 添加到全局以便上传
+--------------------元数据分割线--------------------
+local Player_data = {} -- 当前云服玩家数据
+local CloudData = {}   -- 云端Pull下来的数据
+local Time = 10        -- 定时上传更新的时间间隔，单位秒，10、20、30，强烈推荐这三个值
+local RankMeta = {     -- 排行榜元数据
+    {
+        rank = "rank_1755894081",
+        vValue = "qishi"
+    },
+    {
+        rank = "rank_1755895157",
+        vValue = "danshi"
+    }
+}
+--------------------元数据分割线--------------------
+---
+local function Player_Beat_info() -- 玩家自己的数据
+    for index, meta in ipairs(RankMeta) do
+        Player_data[index] = Player_data[index] or {}
+        for k, _ in pairs(Player_data[index]) do
+            local result, value = VarLib2:getPlayerVarByName(k, 3, meta.vValue) -- 获取要排行的玩家个人数据
+            Player_data[index][k] = value                                       -- 添加到全局以便上传
+        end
     end
 end
 
-local function func_event(param)        -- 编码完事后通过迷你的自定义事件把数据传给client
+local function func_event(param) -- 编码完事后通过迷你的自定义事件把数据传给client
     local ok, json = pcall(JSON.encode, JSON, param)
     Game:dispatchEvent("GetServerData", { customdata = json })
 end
 
-local function PullServer()
-    local callback = function(ret, value)
-        if ret == ErrorCode.OK and value then
-            for k, v in ipairs(value) do
-                CloudData[k] = v
-            end
-            func_event(CloudData)
-        end
+local count = 0
+local function CountRand()
+    count = count + 1
+    if count == #RankMeta then
+        func_event(CloudData)
+        count = 0
     end
-    -- 从云端拉取数据
-    local ret = CloudSever:getOrderDataIndexAreaEx("rank_1755592011", -100, callback)       -- 下载
+end
+
+local function PullServer()
+    for index, meta in ipairs(RankMeta) do
+        local callback = function(ret, value)
+            if ret == ErrorCode.OK and value then
+                CloudData[index] = CloudData[index] or {}
+                for k, v in ipairs(value) do
+                    CloudData[index][k] = v
+                end
+                CountRand()
+            end
+        end
+        CloudSever:getOrderDataIndexAreaEx(meta.rank, -100, callback)
+    end
 end
 
 local function PushServer(e)
     local current = e.second
-    if (current ~= nil and current >= 10 and (current - 10) % 10 == 0) then     -- 10、20、30，强烈推荐这三个值
+    if (current ~= nil and current >= Time and (current - Time) % Time == 0) then
         Player_Beat_info()
-        for k, v in pairs(Player_data) do
-            local ret = CloudSever:setOrderDataBykey("rank_1755592011", k, v)       -- 上传
+        for index, value in ipairs(RankMeta) do
+            for k, v in pairs(Player_data[index]) do
+                local ret = CloudSever:setOrderDataBykey(value.rank, k, v) -- 上传
+            end
         end
         PullServer()
     end
@@ -39,13 +68,19 @@ end
 
 --初始化服务，让排行榜有数据，不然是空的
 local function InitServer(e)
-    local result, value = VarLib2:getPlayerVarByName(e.eventobjid, 3, "击杀数")
-    Player_data[e.eventobjid] = value
+    for index, value in ipairs(RankMeta) do
+        local result, value = VarLib2:getPlayerVarByName(e.eventobjid, 3, value.vValue)
+        Player_data[index] = Player_data[index] or {}
+        Player_data[index][e.eventobjid] = value
+    end
     PullServer()
 end
 
-local function Player_Close(e)      -- 玩家退出后清数据，防止数据重复上传导致请求上限
-    Player_data[e.eventobjid] = nil
+local function Player_Close(e)
+    for index, value in ipairs(RankMeta) do
+        Player_data[index] = Player_data[index] or {}
+        Player_data[index][e.eventobjid] = nil
+    end
 end
 
 -- 仨事件都能看得懂，定时上传、初始化、清理
