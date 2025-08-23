@@ -160,7 +160,7 @@ local function Render(eventobjid)       -- 渲染主函数
         local index = startIndex + k - 1
         local dataItem = Data[player_data[eventobjid].currentRankIndex][index]
         local vValue = (dataItem and tostring(dataItem["v"])) or ""
-        Customui:setText(eventobjid, ui, v, vValue)
+        Customui:setText(eventobjid, ui, v, Convert(vValue))
     end
     My_info(eventobjid) -- 渲染自己的信息
 end
@@ -169,7 +169,7 @@ end
 local function func_event(param)        -- 从server那边搞过来的数据，自定义事件传递
     local ret, data = pcall(JSON.decode,JSON,param.customdata)
     Data = data or {}
-    for k, _ in ipairs(player_data) do
+    for k, _ in pairs(player_data) do
         Render(k)
     end
 end
