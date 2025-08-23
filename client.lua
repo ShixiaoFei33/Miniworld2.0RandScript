@@ -186,7 +186,7 @@ end
 
 local function RightPage(e)     -- 右翻
     if e.uielement == page_ui[3] then
-        if page < math.ceil(#Data / pagesize) then
+        if page < math.ceil(#Data[currentRankIndex] / pagesize) then
             page = page + 1
             Render(e.eventobjid)
         else
